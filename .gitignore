@@ -13,3 +13,5 @@
 dist
 .env*
 public/wp-content
+
+node_modules
