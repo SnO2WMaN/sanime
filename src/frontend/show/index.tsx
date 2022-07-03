@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { createRoot } from "react-dom/client"
 
 import {
+    AnimeInfo,
     calcStatusScore,
     isNearCurrentOrAfterSeason,
     malIdIfPossible,
@@ -63,7 +64,7 @@ function App() {
     const [showOnlyNotInMAL, setShowOnlyNotInMAL] = useState(false)
     const [showOnlyNotInAniList, setShowOnlyNotInAniList] = useState(false)
     const [showOnlyNotInAnnict, setShowOnlyNotInAnnict] = useState(false)
-    const [seasonFilter, setSeasonFilter] = useState("ALL")
+    const [seasonFilter, setSeasonFilter] = useState<SeasonFilter>("ALL")
     const [seasonFilterYear, setSeasonFilterYear] = useState(() => new Date().getFullYear())
     const [seasonFilterName, setSeasonFilterName] = useState<Season>()
     const [showTVAnime, setShowTVAnime] = useState(true)
@@ -219,27 +220,21 @@ function App() {
             </p>
             <div className="anime-list">
                 {animeProps.map(({ key, anime, statuses }) => {
-                    if (showOnlyNotInAniList && anime.idAniList != null) return null
-                    if (showOnlyNotInMAL && anime.idMal != null) return null
-                    if (showOnlyNotInAnnict && anime.idAnnict != null) return null
-                    if (seasonFilter === "CURRENT") {
-                        if (anime.season != null && !isNearCurrentOrAfterSeason(anime.season))
-                            return null
-                    } else if (seasonFilter === "SPECIFIC") {
-                        if (
-                            anime.season == null ||
-                            anime.season.year !== seasonFilterYear ||
-                            (seasonFilterName != null && anime.season.name !== seasonFilterName)
-                        )
-                            return null
-                    } else if (seasonFilter === "NODATA") {
-                        if (anime.season != null) return null
-                    }
-                    if (!showTVAnime && anime.type === "TV") return null
-                    if (!showMovie && anime.type === "MOVIE") return null
-                    if (!showOVA && anime.type === "OVA") return null
-                    if (!showONA && anime.type === "ONA") return null
-                    if (!showOthers && anime.type === "OTHERS") return null
+                    const rlt = skipShowAnime(anime, statuses, {
+                        seasonFilter,
+                        seasonFilterName,
+                        seasonFilterYear,
+                        showMovie,
+                        showONA,
+                        showOnlyNotInAniList,
+                        showOnlyNotInAnnict,
+                        showOnlyNotInMAL,
+                        showOthers,
+                        showOVA,
+                        showTVAnime,
+                    })
+                    if (rlt === null) return null
+
                     const status = new Map<WatchStatus, string[]>()
                     let filterUserSeen = false
                     let onlyWant = hideOnlyWant
@@ -284,13 +279,12 @@ function App() {
                     )
                         return null
                     if (onlyWant) return null
-                    const unknownUsers = users.map(u => u.id).filter(u => !knownUsers.has(u))
                     return (
                         <AnimeComponent
                             key={key}
                             anime={anime}
                             status={status}
-                            unknownUsers={unknownUsers}
+                            unknownUsers={users.map(u => u.id).filter(u => !knownUsers.has(u))}
                         />
                     )
                 })}
@@ -303,6 +297,71 @@ function App() {
             )}
         </div>
     )
+}
+
+type SeasonFilter = string
+
+/**
+ * アニメを表示するか判定する，しないならfalseを返却
+ */
+export const skipShowAnime = (
+    anime: AnimeInfo,
+    statuses: AnimeUserStatus[],
+    {
+        showOnlyNotInAniList: showOnlyNotInAnimeList,
+        showOnlyNotInMAL,
+        showOnlyNotInAnnict,
+        seasonFilter,
+        seasonFilterYear,
+        seasonFilterName,
+        showTVAnime,
+        showMovie,
+        showOVA,
+        showONA,
+        showOthers,
+    }: {
+        showOnlyNotInAniList: boolean
+        showOnlyNotInMAL: boolean
+        showOnlyNotInAnnict: boolean
+
+        seasonFilter: SeasonFilter
+        seasonFilterYear: number
+        seasonFilterName: "WINTER" | "SPRING" | "SUMMER" | "AUTUMN" | undefined
+
+        showTVAnime: boolean
+        showMovie: boolean
+        showOVA: boolean
+        showONA: boolean
+        showOthers: boolean
+    },
+) => {
+    if (showOnlyNotInAnimeList && anime.idAniList != null) return null
+    if (showOnlyNotInAnnict && anime.idAnnict != null) return null
+    if (showOnlyNotInMAL && anime.idMal != null) return null
+
+    if (
+        seasonFilter === "CURRENT" &&
+        // シーズンが無い または 直近のシーズンでは無い 場合は表示しない
+        (anime.season == null || // DONE: ここ逆だったので修正
+            !isNearCurrentOrAfterSeason(anime.season))
+    )
+        return null
+    if (
+        seasonFilter === "SPECIFIC" &&
+        (anime.season == null ||
+            anime.season.year !== seasonFilterYear ||
+            (seasonFilterName != null && anime.season.name !== seasonFilterName))
+    )
+        return null
+    if (seasonFilter === "NODATA" && anime.season == null) return null
+
+    if (!showTVAnime && anime.type === "TV") return null
+    if (!showMovie && anime.type === "MOVIE") return null
+    if (!showOVA && anime.type === "OVA") return null
+    if (!showONA && anime.type === "ONA") return null
+    if (!showOthers && anime.type === "OTHERS") return null
+
+    return true
 }
 
 createRoot(document.getElementById("app")!).render(<App />)
