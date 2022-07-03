@@ -6,6 +6,7 @@ const ResolveTypeScriptPlugin = require("resolve-typescript-plugin")
 module.exports = {
     mode: process.env.NODE_ENV === "production" ? "production" : "development",
     entry: {
+        index: "./src/frontend/index/index.tsx",
         show: "./src/frontend/show/index.tsx",
     },
     output: {
