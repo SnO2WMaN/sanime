@@ -13,11 +13,19 @@ import { fetchAnnictAnimes } from "./fetchers/animes/annict.js"
 import { fetchAniListWatches } from "./fetchers/watchlists/anilist.js"
 import { fetchAnnictWatches } from "./fetchers/watchlists/annict.js"
 import { ViewsShow } from "./views/show.js"
+import { IndexShow } from "./views/index.js"
 
 const app = new App()
 
 app.get("/", ctx => {
-    ctx.body = "/show?users=((annict|anilist):[a-z0-9_]+(,|$))+"
+    console.dir( renderToStaticMarkup(
+        createElement(IndexShow, { }),
+    ))
+    ctx.body =
+        "<!DOCTYPE html>\n" +
+        renderToStaticMarkup(
+            createElement(IndexShow, { }),
+        )
 })
 
 app.get("/wp-login.php", ctx => {
